@@ -15,31 +15,50 @@ enum NivelBloom {
     CREAR
 };
 
-struct Pregunta {
+// Clase base
+class Pregunta {
+public:
     int id;
     char texto[200];
     int nivelBloom;
-    int tiempoEstimado; 
+    int tiempoEstimado;
     char solucion[100];
     bool usadaAnioAnterior;
+
+    virtual void mostrar() const {
+        cout << "ID: " << id
+             << " | Nivel Bloom: " << nivelBloom
+             << " | Tiempo: " << tiempoEstimado << " min"
+             << " | Usada año anterior: " << (usadaAnioAnterior ? "Sí" : "No")
+             << "\nTexto: " << texto
+             << "\nSolución: " << solucion << "\n";
+    }
 };
 
-Pregunta banco[MAX_PREGUNTAS];
-int totalPreguntas = 0;
+// Clase hija que hereda de Pregunta
+class PreguntaConImagen : public Pregunta {
+public:
+    char rutaImagen[200];
 
+    // Sobreescribimos el método mostrar
+    void mostrar() const override {
+        Pregunta::mostrar();
+        cout << "Imagen asociada: " << rutaImagen << "\n";
+    }
+};
+
+Pregunta* banco[MAX_PREGUNTAS];
+int totalPreguntas = 0;
 
 void mostrarNiveles() {
     cout << "1. Recordar\n2. Entender\n3. Aplicar\n4. Analizar\n5. Evaluar\n6. Crear\n";
 }
-
-
 int buscarPreguntaPorID(int id) {
     for (int i = 0; i < totalPreguntas; i++) {
-        if (banco[i].id == id) return i;
+        if (banco[i]->id == id) return i;
     }
     return -1;
 }
-
 
 void crearPregunta() {
     if (totalPreguntas >= MAX_PREGUNTAS) {
@@ -47,35 +66,50 @@ void crearPregunta() {
         return;
     }
 
-    Pregunta p;
-    p.id = totalPreguntas + 1;
+    cout << "¿La pregunta tiene imagen? (s/n): ";
+    char tieneImagen;
+    cin >> tieneImagen;
+
+    Pregunta* p;
+
+    if (tieneImagen == 's'  tieneImagen == 'S') {
+        p = new PreguntaConImagen();
+    } else {
+        p = new Pregunta();
+    }
+
+    p->id = totalPreguntas + 1;
 
     cout << "Ingrese el texto de la pregunta: ";
     cin.ignore();
-    cin.getline(p.texto, 200);
+    cin.getline(p->texto, 200);
 
     mostrarNiveles();
     cout << "Seleccione el nivel Bloom (1-6): ";
-    cin >> p.nivelBloom;
+    cin >> p->nivelBloom;
 
     cout << "Ingrese el tiempo estimado para responder (min): ";
-    cin >> p.tiempoEstimado;
+    cin >> p->tiempoEstimado;
 
     cout << "Ingrese la solución esperada: ";
     cin.ignore();
-    cin.getline(p.solucion, 100);
+    cin.getline(p->solucion, 100);
 
     char usada;
     cout << "¿Fue usada el año anterior? (s/n): ";
     cin >> usada;
-    p.usadaAnioAnterior = (usada == 's' || usada == 'S');
+    p->usadaAnioAnterior = (usada == 's'  usada == 'S');
+
+    if (tieneImagen == 's' || tieneImagen == 'S') {
+        cout << "Ingrese la ruta de la imagen: ";
+        cin.ignore();
+        cin.getline(((PreguntaConImagen*)p)->rutaImagen, 200);
+    }
 
     banco[totalPreguntas++] = p;
 
     cout << "Pregunta creada con éxito.\n";
 }
-
-
 void mostrarPreguntas() {
     if (totalPreguntas == 0) {
         cout << "No hay preguntas registradas.\n";
@@ -83,139 +117,34 @@ void mostrarPreguntas() {
     }
 
     for (int i = 0; i < totalPreguntas; i++) {
-        cout << "ID: " << banco[i].id
-             << " | Nivel Bloom: " << banco[i].nivelBloom
-             << " | Tiempo: " << banco[i].tiempoEstimado << " min"
-             << " | Usada año anterior: " << (banco[i].usadaAnioAnterior ? "Sí" : "No")
-             << "\nTexto: " << banco[i].texto
-             << "\nSolución: " << banco[i].solucion << "\n\n";
+        banco[i]->mostrar();
+        cout << "\n";
     }
 }
-
-
-void editarPregunta() {
-    int id;
-    cout << "Ingrese ID de la pregunta a editar: ";
-    cin >> id;
-
-    int idx = buscarPreguntaPorID(id);
-    if (idx == -1) {
-        cout << "Pregunta no encontrada.\n";
-        return;
-    }
-
-    cout << "Ingrese el nuevo texto de la pregunta: ";
-    cin.ignore();
-    cin.getline(banco[idx].texto, 200);
-
-    mostrarNiveles();
-    cout << "Nuevo nivel Bloom (1-6): ";
-    cin >> banco[idx].nivelBloom;
-
-    cout << "Nuevo tiempo estimado: ";
-    cin >> banco[idx].tiempoEstimado;
-
-    cout << "Nueva solución esperada: ";
-    cin.ignore();
-    cin.getline(banco[idx].solucion, 100);
-
-    char usada;
-    cout << "¿Fue usada el año anterior? (s/n): ";
-    cin >> usada;
-    banco[idx].usadaAnioAnterior = (usada == 's' || usada == 'S');
-
-    cout << "Pregunta actualizada.\n";
-}
-
-
-void eliminarPregunta() {
-    int id;
-    cout << "Ingrese ID de la pregunta a eliminar: ";
-    cin >> id;
-
-    int idx = buscarPreguntaPorID(id);
-    if (idx == -1) {
-        cout << "Pregunta no encontrada.\n";
-        return;
-    }
-
-    for (int i = idx; i < totalPreguntas - 1; i++) {
-        banco[i] = banco[i + 1];
-    }
-    totalPreguntas--;
-
-    cout << "Pregunta eliminada.\n";
-}
-
-
-void buscarPorNivel() {
-    int nivel;
-    mostrarNiveles();
-    cout << "Ingrese el nivel a buscar: ";
-    cin >> nivel;
-
-    for (int i = 0; i < totalPreguntas; i++) {
-        if (banco[i].nivelBloom == nivel) {
-            cout << "ID: " << banco[i].id << " | Texto: " << banco[i].texto << "\n";
-        }
-    }
-}
-
-
-void generarPrueba() {
-    int cantidad, nivel;
-    mostrarNiveles();
-    cout << "Ingrese nivel Bloom deseado para la prueba: ";
-    cin >> nivel;
-
-    cout << "¿Cuántas preguntas desea incluir?: ";
-    cin >> cantidad;
-
-    int contador = 0;
-    int tiempoTotal = 0;
-
-    cout << "\n=== Preguntas de la prueba ===\n";
-    for (int i = 0; i < totalPreguntas && contador < cantidad; i++) {
-        if (banco[i].nivelBloom == nivel && !banco[i].usadaAnioAnterior) {
-            cout << "Pregunta " << (contador + 1) << ": " << banco[i].texto << "\n";
-            tiempoTotal += banco[i].tiempoEstimado;
-            contador++;
-        }
-    }
-
-    if (contador < cantidad) {
-        cout << "No hay suficientes preguntas disponibles para ese nivel.\n";
-    }
-
-    cout << "Tiempo estimado total: " << tiempoTotal << " minutos.\n";
-}
-
 
 void menu() {
     int opcion;
     do {
         cout << "\n--- MENÚ PRINCIPAL ---\n";
-        cout << "1. Crear pregunta\n2. Editar pregunta\n3. Eliminar pregunta\n";
-        cout << "4. Mostrar preguntas\n5. Buscar por nivel\n6. Generar prueba\n7. Salir\n";
+        cout << "1. Crear pregunta\n2. Mostrar preguntas\n3. Salir\n";
         cout << "Seleccione una opción: ";
         cin >> opcion;
 
         switch (opcion) {
             case 1: crearPregunta(); break;
-            case 2: editarPregunta(); break;
-            case 3: eliminarPregunta(); break;
-            case 4: mostrarPreguntas(); break;
-            case 5: buscarPorNivel(); break;
-            case 6: generarPrueba(); break;
-            case 7: cout << "¡Hasta luego!\n"; break;
+            case 2: mostrarPreguntas(); break;
+            case 3: cout << "¡Hasta luego!\n"; break;
             default: cout << "Opción no válida.\n";
         }
 
-    } while (opcion != 7);
+    } while (opcion != 3);
 }
 
 int main() {
     menu();
+    // Liberar memoria
+    for (int i = 0; i < totalPreguntas; i++) {
+        delete banco[i];
+    }
     return 0;
 }
-  
