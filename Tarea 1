@@ -1,12 +1,13 @@
 #include <iostream>
-#include <cstring>
-#include <cstdlib>
+#include <vector>
+#include <string>
+#include <limits>
+#include <algorithm>
+#include <map>
 
 using namespace std;
 
-const int MAX_PREGUNTAS = 100;
-
-enum NivelBloom {
+enum class NivelBloom {
     RECORDAR = 1,
     ENTENDER,
     APLICAR,
@@ -15,136 +16,185 @@ enum NivelBloom {
     CREAR
 };
 
-// Clase base
 class Pregunta {
+protected:
+    string enunciado;
+    NivelBloom nivel;
 public:
-    int id;
-    char texto[200];
-    int nivelBloom;
-    int tiempoEstimado;
-    char solucion[100];
-    bool usadaAnioAnterior;
-
-    virtual void mostrar() const {
-        cout << "ID: " << id
-             << " | Nivel Bloom: " << nivelBloom
-             << " | Tiempo: " << tiempoEstimado << " min"
-             << " | Usada año anterior: " << (usadaAnioAnterior ? "Sí" : "No")
-             << "\nTexto: " << texto
-             << "\nSolución: " << solucion << "\n";
-    }
+    Pregunta(const string& e, NivelBloom n)
+      : enunciado(e), nivel(n) {}
+    virtual void mostrar() const = 0;
+    NivelBloom getNivel() const { return nivel; }
+    virtual ~Pregunta() {}
 };
 
-// Clase hija que hereda de Pregunta
-class PreguntaConImagen : public Pregunta {
+class PreguntaOpcionMultiple : public Pregunta {
+private:
+    vector<string> opciones;
+    int respuestaCorrecta;
 public:
-    char rutaImagen[200];
-
-    // Sobreescribimos el método mostrar
+    PreguntaOpcionMultiple(const string& e, NivelBloom n,
+                           const vector<string>& o, int r)
+      : Pregunta(e, n), opciones(o), respuestaCorrecta(r) {}
     void mostrar() const override {
-        Pregunta::mostrar();
-        cout << "Imagen asociada: " << rutaImagen << "\n";
+        cout << "Opción Múltiple | Nivel " << static_cast<int>(nivel) << "\n"
+             << enunciado << "\n";
+        for (size_t i = 0; i < opciones.size(); ++i)
+            cout << "  " << i+1 << ") " << opciones[i] << "\n";
+        cout << "  ▶ Correcta: " << respuestaCorrecta+1 << "\n";
     }
 };
 
-Pregunta* banco[MAX_PREGUNTAS];
-int totalPreguntas = 0;
-
-void mostrarNiveles() {
-    cout << "1. Recordar\n2. Entender\n3. Aplicar\n4. Analizar\n5. Evaluar\n6. Crear\n";
-}
-int buscarPreguntaPorID(int id) {
-    for (int i = 0; i < totalPreguntas; i++) {
-        if (banco[i]->id == id) return i;
+class PreguntaVerdaderoFalso : public Pregunta {
+private:
+    bool respuesta;
+public:
+    PreguntaVerdaderoFalso(const string& e, NivelBloom n, bool r)
+      : Pregunta(e, n), respuesta(r) {}
+    void mostrar() const override {
+        cout << "Verdadero/Falso | Nivel " << static_cast<int>(nivel) << "\n"
+             << enunciado << "\n"
+             << "  ▶ " << (respuesta ? "Verdadero" : "Falso") << "\n";
     }
-    return -1;
-}
+};
 
-void crearPregunta() {
-    if (totalPreguntas >= MAX_PREGUNTAS) {
-        cout << "Límite de preguntas alcanzado.\n";
-        return;
+class PreguntaRespuestaCorta : public Pregunta {
+private:
+    string respEsperada;
+public:
+    PreguntaRespuestaCorta(const string& e, NivelBloom n, const string& r)
+      : Pregunta(e, n), respEsperada(r) {}
+    void mostrar() const override {
+        cout << "Respuesta Corta | Nivel " << static_cast<int>(nivel) << "\n"
+             << enunciado << "\n"
+             << "  ▶ Esperada: " << respEsperada << "\n";
     }
+};
 
-    cout << "¿La pregunta tiene imagen? (s/n): ";
-    char tieneImagen;
-    cin >> tieneImagen;
-
-    Pregunta* p;
-
-    if (tieneImagen == 's'  tieneImagen == 'S') {
-        p = new PreguntaConImagen();
-    } else {
-        p = new Pregunta();
+class Examen {
+private:
+    vector<Pregunta*> preguntas;
+public:
+    void agregar(Pregunta* p) {
+        preguntas.push_back(p);
     }
-
-    p->id = totalPreguntas + 1;
-
-    cout << "Ingrese el texto de la pregunta: ";
-    cin.ignore();
-    cin.getline(p->texto, 200);
-
-    mostrarNiveles();
-    cout << "Seleccione el nivel Bloom (1-6): ";
-    cin >> p->nivelBloom;
-
-    cout << "Ingrese el tiempo estimado para responder (min): ";
-    cin >> p->tiempoEstimado;
-
-    cout << "Ingrese la solución esperada: ";
-    cin.ignore();
-    cin.getline(p->solucion, 100);
-
-    char usada;
-    cout << "¿Fue usada el año anterior? (s/n): ";
-    cin >> usada;
-    p->usadaAnioAnterior = (usada == 's'  usada == 'S');
-
-    if (tieneImagen == 's' || tieneImagen == 'S') {
-        cout << "Ingrese la ruta de la imagen: ";
-        cin.ignore();
-        cin.getline(((PreguntaConImagen*)p)->rutaImagen, 200);
-    }
-
-    banco[totalPreguntas++] = p;
-
-    cout << "Pregunta creada con éxito.\n";
-}
-void mostrarPreguntas() {
-    if (totalPreguntas == 0) {
-        cout << "No hay preguntas registradas.\n";
-        return;
-    }
-
-    for (int i = 0; i < totalPreguntas; i++) {
-        banco[i]->mostrar();
-        cout << "\n";
-    }
-}
-
-void menu() {
-    int opcion;
-    do {
-        cout << "\n--- MENÚ PRINCIPAL ---\n";
-        cout << "1. Crear pregunta\n2. Mostrar preguntas\n3. Salir\n";
-        cout << "Seleccione una opción: ";
-        cin >> opcion;
-
-        switch (opcion) {
-            case 1: crearPregunta(); break;
-            case 2: mostrarPreguntas(); break;
-            case 3: cout << "¡Hasta luego!\n"; break;
-            default: cout << "Opción no válida.\n";
+    void mostrarTodas() const {
+        cout << "\n===== EXAMEN =====\n";
+        for (auto p : preguntas) {
+            p->mostrar();
+            cout << "--------------------\n";
         }
+    }
+    void listarPorNivel(NivelBloom nivel) const {
+        cout << "\n--- Nivel " << static_cast<int>(nivel) << " ---\n";
+        for (auto p : preguntas) {
+            if (p->getNivel() == nivel) {
+                p->mostrar();
+                cout << "----------------\n";
+            }
+        }
+    }
+    void resumenPorNivel() const {
+        map<NivelBloom,int> cnt;
+        for (auto p : preguntas) cnt[p->getNivel()]++;
+        cout << "\n=== Resumen por Nivel Bloom ===\n";
+        for (int i = static_cast<int>(NivelBloom::RECORDAR);
+             i <= static_cast<int>(NivelBloom::CREAR); ++i) {
+            cout << i << ": " << cnt[static_cast<NivelBloom>(i)]
+                 << " preguntas\n";
+        }
+    }
+    ~Examen() {
+        for (auto p : preguntas) delete p;
+    }
+};
 
-    } while (opcion != 3);
-}
+class Menu {
+private:
+    Examen examen;
+
+    NivelBloom leerNivel() {
+        int n;
+        cout << "Nivel (1-Recordar 2-Entender 3-Aplicar 4-Analizar 5-Evaluar 6-Crear): ";
+        cin >> n;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        n = max(1, min(6, n));
+        return static_cast<NivelBloom>(n);
+    }
+
+    void opMultiple() {
+        string e;
+        vector<string> o(4);
+        NivelBloom n = leerNivel();
+        cout << "Enunciado: ";
+        getline(cin, e);
+        for (int i = 0; i < 4; ++i) {
+            cout << "Opción " << i+1 << ": ";
+            getline(cin, o[i]);
+        }
+        int r;
+        cout << "Correcta (1-4): ";
+        cin >> r;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        examen.agregar(new PreguntaOpcionMultiple(e, n, o, r-1));
+    }
+
+    void vOF() {
+        string e;
+        NivelBloom n = leerNivel();
+        cout << "Enunciado: ";
+        getline(cin, e);
+        char c;
+        cout << "Verdadero(v)/Falso(f): ";
+        cin >> c;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        examen.agregar(new PreguntaVerdaderoFalso(e, n, (c=='v'||c=='V')));
+    }
+
+    void respCorta() {
+        string e, r;
+        NivelBloom n = leerNivel();
+        cout << "Enunciado: ";
+        getline(cin, e);
+        cout << "Respuesta esperada: ";
+        getline(cin, r);
+        examen.agregar(new PreguntaRespuestaCorta(e, n, r));
+    }
+
+public:
+    void mostrar() {
+        int op;
+        do {
+            cout << "\n1) Opción múltiple\n"
+                 << "2) Verdadero/Falso\n"
+                 << "3) Respuesta corta\n"
+                 << "4) Mostrar examen\n"
+                 << "5) Listar por nivel\n"
+                 << "6) Resumen niveles\n"
+                 << "7) Salir\n"
+                 << "Elige: ";
+            cin >> op;
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            switch (op) {
+                case 1: opMultiple();         break;
+                case 2: vOF();                break;
+                case 3: respCorta();          break;
+                case 4: examen.mostrarTodas();    break;
+                case 5: {
+                    NivelBloom n = leerNivel();
+                    examen.listarPorNivel(n);
+                    break;
+                }
+                case 6: examen.resumenPorNivel();  break;
+                case 7: cout << "Fin\n";      break;
+                default: cout << "Inválido\n";
+            }
+        } while (op != 7);
+    }
+};
 
 int main() {
-    menu();
-    // Liberar memoria
-    for (int i = 0; i < totalPreguntas; i++) {
-        delete banco[i];
-    }
+    Menu m;
+    m.mostrar();
     return 0;
 }
